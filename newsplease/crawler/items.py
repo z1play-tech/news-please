@@ -42,3 +42,7 @@ class NewscrawlerItem(scrapy.Item):
     article_publish_date = scrapy.Field()
     # Extracted language of the article
     article_language = scrapy.Field()
+    # Rich body (DOM walk; figures / captions) — set in library ``from_html`` path
+    article_body_plain = scrapy.Field()
+    article_body_markdown = scrapy.Field()
+    article_body_image_urls = scrapy.Field()

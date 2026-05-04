@@ -14,6 +14,7 @@ from newsplease.crawler.items import NewscrawlerItem
 from dotmap import DotMap
 from newsplease.pipeline.pipelines import ExtractedInformationStorage
 from newsplease.crawler.simple_crawler import SimpleCrawler
+from newsplease.body_markdown import extract_body_rich
 
 
 class EmptyResponseError(ValueError):
@@ -107,6 +108,11 @@ class NewsPlease:
         item["download_date"] = download_date
         item["modified_date"] = None
         item = extractor.extract(item)
+
+        body_plain, body_md, body_imgs = extract_body_rich(html, url or "")
+        item["article_body_plain"] = body_plain.strip() or None
+        item["article_body_markdown"] = body_md.strip() or None
+        item["article_body_image_urls"] = body_imgs
 
         tmp_article = ExtractedInformationStorage.extract_relevant_info(item)
         final_article = ExtractedInformationStorage.convert_to_class(tmp_article)

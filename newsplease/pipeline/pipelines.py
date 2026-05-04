@@ -318,7 +318,10 @@ class ExtractedInformationStorage(object):
             'title_rss': ExtractedInformationStorage.ensure_str(item['rss_title']),
             'source_domain': ExtractedInformationStorage.ensure_str(item['source_domain']),
             'maintext': item['article_text'],
-            'url': item['url']
+            'url': item['url'],
+            'maintext_body_plain': item.get('article_body_plain'),
+            'maintext_markdown': item.get('article_body_markdown'),
+            'body_image_urls': item.get('article_body_image_urls') or [],
         }
 
         # clean values
@@ -353,6 +356,9 @@ class ExtractedInformationStorage(object):
         news_article.title_rss = item['title_rss']
         news_article.source_domain = item['source_domain']
         news_article.maintext = item['maintext']
+        news_article.maintext_body_plain = item.get('maintext_body_plain')
+        news_article.maintext_markdown = item.get('maintext_markdown')
+        news_article.body_image_urls = item.get('body_image_urls') or []
         news_article.url = item['url']
         return news_article
 

@@ -13,6 +13,10 @@ class NewsArticle(object):
     localpath = None
     source_domain = None
     maintext = None
+    # DOM-derived body (plain + markdown with <figure>/![…] — see ``body_markdown.extract_body_rich``)
+    maintext_body_plain = None
+    maintext_markdown = None
+    body_image_urls = None
     text = None
     title = None
     title_page = None
@@ -46,6 +50,9 @@ class NewsArticle(object):
             'language': self.language,
             'localpath': self.localpath,
             'maintext': self.maintext,
+            'maintext_body_plain': self.maintext_body_plain,
+            'maintext_markdown': self.maintext_markdown,
+            'body_image_urls': self.body_image_urls or [],
             'source_domain': self.source_domain,
             'text': self.text,
             'title': self.title,
