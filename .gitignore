@@ -15,3 +15,7 @@ venv/
 .python-version
 build
 **.egg-info/
+
+# local runtime data and migration backup
+medias/
+.pre_flatten_backup/
