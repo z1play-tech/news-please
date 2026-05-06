@@ -27,6 +27,8 @@ cd /home/tss/scraper2
 
 1. Tạo `.venv` nếu chưa có (`uv venv .venv`).
 2. Cài dependency theo `requirements.txt`, trong đó có **`-e ./newspaper`** (editable trỏ vào fork local).
+3. Tự kiểm tra `./newspaper/setup.py` và báo lỗi sớm nếu thiếu source fork.
+4. Nếu thiếu `uv`, script sẽ tự cài qua installer chính thức (cần `curl` hoặc `wget`).
 
 **Lưu ý:** Nếu bạn chỉ copy mã mà không chạy bước này, editable install có thể vẫn trỏ đường cũ → `import newsplease` lỗi → service không khởi động được.
 

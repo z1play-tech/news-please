@@ -86,6 +86,25 @@ _MD_SECTION_CUT_RE = re.compile(
     r"^\s{0,3}(?:#{1,6}\s*)?(?:tag|tags|tin mới nhất|tin mới|đọc nhiều|xem thêm|tin liên quan|cùng chuyên mục|tin cùng chuyên mục)\s*:?\s*$",
     re.IGNORECASE,
 )
+_MD_SOURCE_PREFIX_RE = re.compile(
+    r"^\s*(?:[A-Z0-9À-ỴĐ][A-Z0-9À-ỴĐ.\-]{1,30})\s*-\s*",
+    re.IGNORECASE,
+)
+_MD_SOURCE_PREFIX_WITH_HEADING_RE = re.compile(
+    r"^\s{0,3}(?:#{1,6}\s*)?(?:[A-Z0-9À-ỴĐ][A-Z0-9À-ỴĐ.\-]{1,30})\s*-\s*",
+    re.IGNORECASE,
+)
+_MD_UPPER_SECTION_RE = re.compile(
+    r"^\s{0,3}(?:#{1,6}\s*)?[A-ZÀ-ỴĐ0-9][A-ZÀ-ỴĐ0-9\s/&\-]{2,40}\s*$",
+)
+_PLAIN_SOURCE_PREFIX_RE = re.compile(
+    r"(?:^|\s)(?:[A-Z0-9À-ỴĐ][A-Z0-9À-ỴĐ.\-]{1,30})\s*-\s*",
+    re.IGNORECASE,
+)
+_PLAIN_CUT_RE = re.compile(
+    r"(?:\bTin liên quan\b|\bTag\s*:|\bMời quý độc giả theo dõi\b)",
+    re.IGNORECASE,
+)
 
 _http_adapter = HTTPAdapter(
     pool_connections=20,
@@ -379,6 +398,7 @@ def _dedupe_description_paragraphs(text_markdown: str, description: str | None) 
 
     def _norm_para(p: str) -> str:
         cleaned = p.strip()
+        cleaned = _MD_SOURCE_PREFIX_WITH_HEADING_RE.sub("", cleaned)
         cleaned = re.sub(r"^[*_`>\-\s]+", "", cleaned)
         cleaned = re.sub(r"[*_`]+$", "", cleaned)
         cleaned = re.sub(r"\W+", "", cleaned.lower(), flags=re.UNICODE)
@@ -407,11 +427,24 @@ def _clean_markdown_noise(text_markdown: str) -> str:
     i = 0
     while i < len(parts):
         p = parts[i]
+        p_stripped = p.strip()
         if _MD_AUTHOR_RE.match(p) or _MD_DATETIME_RE.match(p):
             i += 1
             continue
         if _MD_SECTION_CUT_RE.match(p):
             break
+        if _MD_UPPER_SECTION_RE.match(p_stripped) and len(p_stripped.split()) <= 5:
+            i += 1
+            continue
+        p_no_prefix = _MD_SOURCE_PREFIX_WITH_HEADING_RE.sub("", p_stripped)
+        if p_no_prefix != p_stripped:
+            p = p_no_prefix
+            p_stripped = p_no_prefix
+            if not p_stripped:
+                i += 1
+                continue
+            if _MD_SECTION_CUT_RE.match(p_stripped):
+                break
         # Common "related cards" tail: markdown image followed by heading teaser.
         if p.startswith("![") and i + 1 < len(parts) and parts[i + 1].startswith("#"):
             title = re.sub(r"^#{1,6}\s*", "", parts[i + 1]).strip().lower()
@@ -419,9 +452,25 @@ def _clean_markdown_noise(text_markdown: str) -> str:
             alt = (alt_match.group(1).strip().lower() if alt_match else "")
             if title and alt and (title in alt or alt in title):
                 break
+        # HTML figure + following heading is usually "related article" tail on VOV.
+        if "<figure" in p.lower() and i + 1 < len(parts) and re.match(r"^#{3,6}\s+", parts[i + 1]):
+            break
         cleaned.append(p)
         i += 1
     return "\n\n".join(cleaned).strip()
+
+
+def _clean_plain_text_noise(text: str | None) -> str:
+    body = (text or "").strip()
+    if not body:
+        return body
+    body = re.sub(r"\s+", " ", body).strip()
+    body = re.sub(r"^\s*[A-ZÀ-ỴĐ0-9][A-ZÀ-ỴĐ0-9\s/&\-]{2,40}\s+", "", body)
+    body = _PLAIN_SOURCE_PREFIX_RE.sub(" ", body)
+    cut = _PLAIN_CUT_RE.search(body)
+    if cut:
+        body = body[:cut.start()]
+    return re.sub(r"\s+", " ", body).strip()
 
 
 def _looks_like_image_url(url: str | None, page_url: str = "") -> bool:
@@ -596,6 +645,7 @@ def _crawl_np(
     text_markdown = _dedupe_description_paragraphs(text_markdown, description)
     text_markdown = _clean_markdown_noise(text_markdown)
     text_markdown = _remove_trailing_figure_if_any(text_markdown)
+    text = _clean_plain_text_noise(text)
 
     media_date = article.date_publish or datetime.now()
     if download_media:
